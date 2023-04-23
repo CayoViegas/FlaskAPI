@@ -1,6 +1,14 @@
 from flask import Flask
-from flask_pydantic_spec import FlaskPydanticSpec, Response
+from flask_pydantic_spec import FlaskPydanticSpec, Response, Request
 from pydantic import BaseModel
+import psycopg2
+
+con = psycopg2.connect(host="localhost",
+                       database="flaskapi", 
+                       user="asd", 
+                       password="123")
+
+cur = con.cursor()
 
 server = Flask(__name__)
 spec = FlaskPydanticSpec("Flask", title="FlaskAPI")
@@ -20,8 +28,14 @@ class Pessoa(BaseModel):
     endereco: Endereco
 
 @server.get("/pessoas")
-@spec.validate(resp=Response(HTTP_200=Pessoa))
 def get_pessoas():
     return "Pessoas"
+
+@server.post("/pessoas")
+@spec.validate(body=Request(Pessoa), resp=Response(HTTP_200=Pessoa))
+def criar_pessoa():
+    body = request.context.body.dict()
+    return body
+
 
 server.run()
