@@ -52,3 +52,58 @@ def criar_pessoa():
             id_pessoa = cursor.fetchone()[0]
     
     return {"id": id_pessoa, "message": "Pessoa criada com sucesso."}, 201
+
+@app.get("/pessoa")
+def listar_pessoas():
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT P.nome, E.logradouro FROM Pessoas P JOIN Enderecos E ON P.endereco_id = E.id;")
+            pessoas = cursor.fetchall()
+    
+    return {"pessoas": pessoas}, 200
+
+@app.get("/pessoa/<int:id>")
+def buscar_pessoa(id):
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT P.nome, E.logradouro FROM Pessoas P JOIN Enderecos E ON P.endereco_id = E.id AND P.id = %s", (id,))
+            pessoa = cursor.fetchone()
+    
+    if pessoa:
+        return {"pessoa": pessoa}, 200
+    
+    return {"message": "Pessoa não encontrada."}, 404
+
+@app.put("/pessoa/<int:id>")
+def atualizar_pessoa(id):
+    data = request.get_json()
+    nome = data["nome"]
+    data_nascimento = data["data_nascimento"]
+    logradouro = data["logradouro"]
+    cep = data["cep"]
+    numero = data["numero"]
+    cidade = data["cidade"]
+
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id FROM Pessoas WHERE id = %s", (id,))
+            pessoa = cursor.fetchone()
+            if pessoa:
+                cursor.execute("UPDATE Pessoas SET nome = %s, data_nascimento = %s WHERE id = %s", (nome, data_nascimento, id))
+                cursor.execute("UPDATE Enderecos SET logradouro = %s, cep = %s, numero = %s, cidade = %s WHERE id = %s", (logradouro, cep, numero, cidade, pessoa[0]))
+                return {"message": "Pessoa atualizada com sucesso."}, 200
+            
+            return {"message": "Pessoa não encontrada."}, 404
+        
+@app.delete("/pessoa/<int:id>")
+def deletar_pessoa(id):
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id FROM Pessoas WHERE id = %s", (id,))
+            pessoa = cursor.fetchone()
+            if pessoa:
+                cursor.execute("DELETE FROM Pessoas WHERE id = %s", (id,))
+                cursor.execute("DELETE FROM Enderecos WHERE id = %s", (pessoa[0],))
+                return {"message": "Pessoa deletada com sucesso."}, 200
+            
+            return {"message": "Pessoa não encontrada."}, 404
